@@ -72,7 +72,7 @@ PG_TESTE="postgresql://postgres:senha@localhost:5432/postgres" npm test
 supabase/schema.sql   banco: tabelas, regras, funções, permissões, cardápio inicial
 api/index.js          função da Vercel (recebe /api/*)
 vercel.json           rotas, cabeçalhos de segurança, região São Paulo, cron diário
-src/app.js            rotas da API (público, cozinha, admin)
+src/rotas.js          rotas da API (público, cozinha, admin)
 src/supabase.js       acesso ao banco e às fotos
 src/pagamentos.js     Mercado Pago: Pix, cartão, webhook
 src/auth.js           senhas e sessões

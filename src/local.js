@@ -6,7 +6,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
-const { tratar, CABECALHOS_SEGURANCA } = require('./app');
+const { tratar, CABECALHOS_SEGURANCA } = require('./rotas');
 const { URL_SUPABASE } = require('./supabase');
 
 const PORTA = Number(process.env.PORTA || 3000);

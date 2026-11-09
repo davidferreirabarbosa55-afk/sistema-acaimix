@@ -8,7 +8,7 @@
 let tratar = null;
 let erroAoCarregar = null;
 try {
-  ({ tratar } = require('../src/app'));
+  ({ tratar } = require('../src/rotas'));
 } catch (e) {
   erroAoCarregar = e;
   console.error('[inicialização] o código da API não carregou:', e);

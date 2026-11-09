@@ -233,6 +233,24 @@ test('cabeçalhos de segurança no servidor local', async () => {
   assert.equal((await fetch(s.base + '/admin')).status, 200, '/admin abre admin.html, como na Vercel');
 });
 
+test('Vercel não confunde o projeto com um servidor Node (causa do FUNCTION_INVOCATION_FAILED)', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const v = require('../vercel.json');
+  assert.equal(v.framework, null, 'vercel.json precisa forçar o preset "Other"');
+  assert.equal(v.outputDirectory, 'public');
+  // A Vercel inicia sozinha arquivos com estes nomes como servidor; nenhum deles pode existir.
+  for (const pasta of ['.', 'src']) {
+    for (const nome of ['app', 'server', 'index', 'main']) {
+      for (const ext of ['.js', '.cjs', '.mjs', '.ts']) {
+        assert.ok(!fs.existsSync(path.join(__dirname, '..', pasta, nome + ext)), `${pasta}/${nome}${ext} não pode existir`);
+      }
+    }
+  }
+  // A função da Vercel precisa exportar uma função.
+  assert.equal(typeof require('../api/index.js'), 'function');
+});
+
 test('vercel.json tem os mesmos cabeçalhos e o cron', () => {
   const v = require('../vercel.json');
   const cab = Object.fromEntries(v.headers[0].headers.map((h) => [h.key, h.value]));
@@ -242,7 +260,7 @@ test('vercel.json tem os mesmos cabeçalhos e o cron', () => {
 });
 
 test('não deixa ler arquivos fora da pasta pública', async () => {
-  for (const caminho of ['/../src/app.js', '/%2e%2e/.env', '/.env', '/../supabase/schema.sql']) {
+  for (const caminho of ['/../src/rotas.js', '/%2e%2e/.env', '/.env', '/../supabase/schema.sql']) {
     const r = await fetch(s.base + caminho);
     assert.equal(r.status, 404, caminho);
   }

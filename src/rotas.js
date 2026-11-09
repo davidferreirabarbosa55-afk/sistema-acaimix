@@ -1,4 +1,6 @@
-// API da Açaí Mix. Roda como função da Vercel (api/index.js) ou no servidor local (src/local.js).
+// API da Açaí Mix (rotas). Roda como função da Vercel (api/index.js) ou no servidor local (src/local.js).
+// Nome "rotas.js" de propósito: a Vercel trata arquivos chamados app.js, server.js ou index.js como
+// "servidor" e tenta iniciá-los sozinha, o que derrubava a função (FUNCTION_INVOCATION_FAILED).
 // Todo dado fica no Supabase; aqui não há estado guardado entre requisições.
 'use strict';
 
