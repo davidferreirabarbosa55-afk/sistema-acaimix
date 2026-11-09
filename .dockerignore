@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+data/
+node_modules/
+tests/
+*.zip
+.git/
+.gitignore
+README.md
+DEPLOY-FLY.md
+fly.toml

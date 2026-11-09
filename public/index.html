@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#3f1068">
+  <title>Açaí Mix · Cardápio</title>
+  <meta name="description" content="Peça seu açaí e sorvete pelo celular.">
+  <link rel="icon" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@400;700;800&display=swap">
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+  <header class="hero">
+    <img class="logo" id="logo" src="/logo-horizontal.jpg" alt="Açaí Mix" width="720" height="343" fetchpriority="high">
+    <p class="slogan" id="slogan">Açaí e sorvetes do jeito que você gosta</p>
+    <div class="infos">
+      <span class="pilula" id="status-loja"><span class="bolinha"></span> <span id="status-texto">Aberto agora</span></span>
+      <a class="pilula escondido" id="whatsapp" target="_blank" rel="noopener">💬 WhatsApp</a>
+      <a class="pilula" id="meu-pedido" href="/pedido.html" hidden>🧾 Meu último pedido</a>
+    </div>
+  </header>
+
+  <div class="aviso escondido" id="aviso"><div>📣 <span id="aviso-texto"></span></div></div>
+  <div class="aviso teste escondido" id="aviso-teste"><div>🧪 Modo de teste: os pagamentos são simulados.</div></div>
+
+  <div class="barra" id="barra">
+    <div class="barra-interna">
+      <label class="busca"><span class="sr">Buscar no cardápio</span><input id="busca" type="search" placeholder="Buscar açaí, sorvete, milkshake…" autocomplete="off"></label>
+      <nav class="chips" id="chips" aria-label="Categorias"></nav>
+    </div>
+  </div>
+
+  <main class="pagina">
+    <section id="secao-destaques" class="escondido">
+      <div class="titulo-secao"><h2>⭐ Mais pedidos</h2></div>
+      <div class="destaques" id="destaques"></div>
+    </section>
+    <div id="cardapio"><p class="sem-resultado">Carregando o cardápio…</p></div>
+    <p class="sem-resultado escondido" id="sem-resultado">Nada encontrado. Tente outra palavra 🍧</p>
+  </main>
+
+  <div class="flutuante" id="flutuante">
+    <button type="button" id="abrir-sacola">
+      <span class="esq"><span class="contador" id="contador">0</span> Ver sacola</span>
+      <span id="total-flutuante">R$ 0,00</span>
+    </button>
+  </div>
+
+  <!-- Janela do produto (escolha de adicionais) -->
+  <dialog class="folha" id="janela-produto" aria-labelledby="prod-nome">
+    <div class="janela">
+      <div class="rolagem">
+        <div class="janela-cabeca">
+          <button class="icone-botao fechar-janela" type="button" data-fechar aria-label="Fechar">✕</button>
+          <div id="prod-foto"></div>
+        </div>
+        <div class="info">
+          <h2 id="prod-nome"></h2>
+          <p id="prod-desc"></p>
+          <div class="preco" id="prod-preco"></div>
+        </div>
+        <div class="bloco escondido" id="bloco-adicionais">
+          <div class="bloco-titulo"><h3>Turbine seu pedido 🍓</h3><small>Opcional</small></div>
+          <div id="lista-adicionais"></div>
+        </div>
+        <div class="bloco">
+          <div class="campo">
+            <label for="prod-obs">Alguma observação?</label>
+            <textarea id="prod-obs" maxlength="140" rows="2" placeholder="Ex.: sabor morango, pouca granola, sem banana…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="rodape">
+        <div class="stepper">
+          <button type="button" id="prod-menos" aria-label="Diminuir">−</button>
+          <span id="prod-qtd">1</span>
+          <button type="button" id="prod-mais" aria-label="Aumentar">+</button>
+        </div>
+        <button class="botao amarelo cheio" type="button" id="prod-adicionar">Adicionar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Sacola e finalização -->
+  <dialog class="folha" id="janela-sacola" aria-labelledby="sacola-titulo">
+    <div class="janela">
+      <div class="sacola-cabeca">
+        <h2 id="sacola-titulo">Sua sacola</h2>
+        <button class="icone-botao" type="button" data-fechar aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="rolagem bloco" id="etapa-itens">
+        <div id="itens-sacola"></div>
+        <div class="resumo-total"><span class="suave">Total</span><strong id="total-sacola">R$ 0,00</strong></div>
+      </div>
+
+      <form class="rolagem bloco escondido" id="etapa-dados" novalidate>
+        <button type="button" class="voltar" id="voltar-itens">← Voltar para a sacola</button>
+        <div class="campo">
+          <label for="nome">Seu nome</label>
+          <input id="nome" name="nome" maxlength="60" autocomplete="given-name" required>
+        </div>
+        <div class="campo">
+          <label for="telefone">WhatsApp <span class="suave">(opcional)</span></label>
+          <input id="telefone" name="telefone" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="(87) 9 9999-9999">
+        </div>
+
+        <p class="rotulo">Como vai receber?</p>
+        <div class="escolhas">
+          <label><input type="radio" name="tipo" value="retirada" checked><span class="ico">🛍️</span>Retirar no balcão</label>
+          <label><input type="radio" name="tipo" value="mesa"><span class="ico">🪑</span>Estou na mesa</label>
+        </div>
+        <div class="campo escondido" id="campo-mesa">
+          <label for="mesa">Número da mesa</label>
+          <input id="mesa" name="mesa" maxlength="10" inputmode="numeric">
+        </div>
+
+        <p class="rotulo">Pagamento</p>
+        <div class="escolhas">
+          <label><input type="radio" name="pagamento" value="pix" checked><span class="ico">⚡</span>Pix</label>
+          <label><input type="radio" name="pagamento" value="cartao"><span class="ico">💳</span>Cartão</label>
+          <label id="opcao-balcao"><input type="radio" name="pagamento" value="balcao"><span class="ico">🏪</span>No balcão</label>
+        </div>
+        <div class="campo" id="campo-email">
+          <label for="email">E-mail <span class="suave">(para o comprovante do Pix)</span></label>
+          <input id="email" name="email" type="email" maxlength="120" autocomplete="email">
+        </div>
+        <div class="campo">
+          <label for="observacao">Observação geral <span class="suave">(opcional)</span></label>
+          <textarea id="observacao" name="observacao" maxlength="200" rows="2"></textarea>
+        </div>
+        <div id="erro" class="erro escondido" role="alert"></div>
+      </form>
+
+      <div class="rodape">
+        <button class="botao amarelo cheio" type="button" id="avancar">Continuar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/comum.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

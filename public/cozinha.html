@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Cozinha · Açaí Mix</title>
+  <link rel="icon" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@400;700;800&display=swap">
+  <link rel="stylesheet" href="/estilo.css">
+  <link rel="stylesheet" href="/cozinha.css">
+</head>
+<body class="cozinha">
+  <section id="tela-login" class="escondido">
+    <form class="login-box" id="form-login">
+      <img src="/logo-horizontal.jpg" alt="Açaí Mix">
+      <h1>Cozinha</h1>
+      <div class="campo"><label for="usuario">Usuário</label><input id="usuario" autocomplete="username" autocapitalize="none" required></div>
+      <div class="campo"><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required></div>
+      <div id="erro-login" class="erro escondido" role="alert"></div>
+      <button class="botao cheio" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <section id="tela-painel" class="escondido">
+    <header class="cz-topo">
+      <div class="marca">
+        <img src="/logo-horizontal.jpg" alt="" id="logo">
+        <div><h1>Pedidos</h1><small><span class="indicador" id="indicador"></span> <span id="conexao">conectando…</span></small></div>
+      </div>
+      <div class="acoes">
+        <button type="button" id="som">🔔 Som ligado</button>
+        <button type="button" id="abrir-disp">Acabou algo?</button>
+        <a href="/admin" id="link-admin" class="escondido">Admin</a>
+        <button type="button" id="sair">Sair</button>
+      </div>
+    </header>
+    <main class="quadro">
+      <div class="coluna"><h2>Novos <span id="n-recebido">0</span></h2><div id="col-recebido"></div></div>
+      <div class="coluna"><h2>Preparando <span id="n-em_preparo">0</span></h2><div id="col-em_preparo"></div></div>
+      <div class="coluna"><h2>Prontos <span id="n-pronto">0</span></h2><div id="col-pronto"></div></div>
+    </main>
+  </section>
+
+  <dialog class="folha painel-disp" id="janela-disp" aria-labelledby="disp-titulo">
+    <div class="janela">
+      <div class="sacola-cabeca"><h2 id="disp-titulo">O que tem hoje?</h2><button class="icone-botao" type="button" data-fechar aria-label="Fechar">✕</button></div>
+      <div class="rolagem bloco">
+        <p class="suave">Desligue o que acabou. Some do cardápio na hora.</p>
+        <h3>Produtos</h3><div id="disp-produtos"></div>
+        <h3>Adicionais</h3><div id="disp-adicionais"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/comum.js"></script>
+  <script src="/cozinha.js"></script>
+</body>
+</html>

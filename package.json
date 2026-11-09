@@ -1,0 +1,16 @@
+{
+  "name": "acai-mix",
+  "version": "2.0.0",
+  "description": "Açaí Mix: cardápio online, pedidos, pagamento via Mercado Pago (Pix e cartão), painel da cozinha e painel do administrador.",
+  "main": "src/server.js",
+  "private": true,
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "criar-usuario": "node --disable-warning=ExperimentalWarning scripts/criar-usuario.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"tests/*.test.js\"",
+    "backup": "node --disable-warning=ExperimentalWarning scripts/backup.js"
+  }
+}

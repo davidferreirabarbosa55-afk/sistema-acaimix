@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Admin · Açaí Mix</title>
+  <link rel="icon" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@400;700;800&display=swap">
+  <link rel="stylesheet" href="/estilo.css">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body class="admin">
+  <!-- Login -->
+  <section class="login-admin escondido" id="tela-login">
+    <form id="form-login">
+      <img src="/logo-horizontal.jpg" alt="Açaí Mix" class="logo-img">
+      <h1>Área do administrador</h1>
+      <div class="campo"><label for="usuario">Usuário</label><input id="usuario" autocomplete="username" autocapitalize="none" required></div>
+      <div class="campo"><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required></div>
+      <div id="erro-login" class="erro escondido" role="alert"></div>
+      <button class="botao cheio" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <!-- Painel -->
+  <div class="adm escondido" id="tela-painel">
+    <aside class="lateral">
+      <img class="logo logo-img" src="/logo-horizontal.jpg" alt="Açaí Mix">
+      <nav id="menu">
+        <button type="button" data-aba="resumo" class="ativo">📊 <span class="txt">Resumo</span></button>
+        <button type="button" data-aba="pedidos">🧾 <span class="txt">Pedidos</span></button>
+        <button type="button" data-aba="cardapio">🍧 <span class="txt">Cardápio</span></button>
+        <button type="button" data-aba="adicionais">🍓 <span class="txt">Adicionais</span></button>
+        <button type="button" data-aba="loja">🏪 <span class="txt">Loja</span></button>
+        <button type="button" data-aba="usuarios">👥 <span class="txt">Usuários</span></button>
+      </nav>
+      <div class="rodape-lateral">
+        <span id="quem"></span>
+        <a href="/" target="_blank" rel="noopener">Ver cardápio ↗</a>
+        <a href="/cozinha">Cozinha</a>
+        <button type="button" id="sair">Sair</button>
+      </div>
+    </aside>
+
+    <main class="principal">
+      <!-- RESUMO -->
+      <section data-secao="resumo">
+        <div class="cabecalho"><div><h1>Olá! 👋</h1><p>Como está o movimento hoje</p></div></div>
+        <div class="painel aviso-alertas escondido" id="alertas"><h2>⚠️ Precisa de atenção</h2><ul id="lista-alertas"></ul></div>
+        <div class="chave-loja" id="chave-loja">
+          <div><strong id="texto-loja">Loja aberta</strong><div class="suave" id="sub-loja">Recebendo pedidos pelo cardápio online</div></div>
+          <input type="checkbox" class="chave" id="loja-aberta" aria-label="Loja aberta">
+        </div>
+        <div class="numeros">
+          <div class="numero destaque-num"><small>Faturamento hoje</small><strong id="r-fat">—</strong></div>
+          <div class="numero"><small>Pedidos hoje</small><strong id="r-ped">—</strong></div>
+          <div class="numero"><small>Ticket médio</small><strong id="r-ticket">—</strong></div>
+          <div class="numero"><small>Na cozinha agora</small><strong id="r-andamento">—</strong></div>
+        </div>
+        <div class="grade-2">
+          <div class="painel"><h2>Últimos 7 dias</h2><div class="barras" id="barras"></div></div>
+          <div class="painel"><h2>Mais vendidos <small class="suave">30 dias</small></h2><ol class="ranking" id="ranking"></ol></div>
+        </div>
+      </section>
+
+      <!-- PEDIDOS -->
+      <section data-secao="pedidos" class="escondido">
+        <div class="cabecalho">
+          <div><h1>Pedidos</h1><p id="resumo-dia">Todos os pedidos do dia escolhido</p></div>
+          <input type="date" id="dia-pedidos" class="botao contorno">
+        </div>
+        <div class="painel tabela-rolagem">
+          <table class="tabela">
+            <thead><tr><th>Nº</th><th>Hora</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody id="tabela-pedidos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- CARDÁPIO -->
+      <section data-secao="cardapio" class="escondido">
+        <div class="cabecalho">
+          <div><h1>Cardápio</h1><p>Produtos, preços, fotos e categorias</p></div>
+          <div class="acoes-cardapio">
+            <button class="botao contorno" type="button" id="nova-categoria">+ Categoria</button>
+            <button class="botao amarelo" type="button" id="novo-produto">+ Produto</button>
+          </div>
+        </div>
+        <div id="lista-cardapio"></div>
+      </section>
+
+      <!-- ADICIONAIS -->
+      <section data-secao="adicionais" class="escondido">
+        <div class="cabecalho"><div><h1>Adicionais</h1><p>Complementos que o cliente escolhe no açaí e no sorvete. Preço 0 = grátis.</p></div></div>
+        <div class="painel tabela-rolagem">
+          <table class="tabela">
+            <thead><tr><th>Nome</th><th>Preço (R$)</th><th>Disponível</th><th></th></tr></thead>
+            <tbody id="tabela-adicionais"></tbody>
+          </table>
+          <form id="form-adicional" class="form-grade">
+            <div class="campo"><label for="ad-nome">Novo adicional</label><input id="ad-nome" maxlength="40" placeholder="Ex.: Leite Ninho" required></div>
+            <div class="campo"><label for="ad-preco">Preço (R$)</label><input id="ad-preco" inputmode="decimal" placeholder="0,00"></div>
+            <div class="inteiro"><button class="botao" type="submit">Adicionar</button></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- LOJA -->
+      <section data-secao="loja" class="escondido">
+        <div class="cabecalho"><div><h1>Loja</h1><p>Informações que aparecem no cardápio</p></div></div>
+        <div class="grade-2">
+          <form class="painel" id="form-loja">
+            <h2>Informações</h2>
+            <div class="campo"><label for="cfg-nome">Nome da loja</label><input id="cfg-nome" maxlength="40" required></div>
+            <div class="campo"><label for="cfg-slogan">Frase abaixo da logo</label><input id="cfg-slogan" maxlength="80"></div>
+            <div class="campo"><label for="cfg-aviso">Aviso em destaque <span class="suave">(deixe vazio para esconder)</span></label><input id="cfg-aviso" maxlength="160" placeholder="Ex.: Hoje açaí 500ml por R$ 15!"></div>
+            <div class="campo"><label for="cfg-whats">WhatsApp da loja <span class="suave">(com DDD)</span></label><input id="cfg-whats" maxlength="20" inputmode="tel" placeholder="87999999999"></div>
+            <label class="linha-chave"><span>Loja aberta<small>Desligado: o cardápio mostra "Fechado" e não aceita pedidos</small></span><input type="checkbox" class="chave" id="cfg-aberta"></label>
+            <label class="linha-chave"><span>Aceitar pagamento no balcão<small>Cliente pede pelo site e paga no caixa</small></span><input type="checkbox" class="chave" id="cfg-balcao"></label>
+            <p></p>
+            <button class="botao" type="submit">Salvar</button>
+          </form>
+          <div>
+            <div class="painel">
+              <h2>Logo</h2>
+              <div class="upload">
+                <div class="foto larga" id="prev-logo"></div>
+                <div class="acoes-upload">
+                  <label class="botao contorno" for="arquivo-logo">Trocar logo</label>
+                  <input type="file" id="arquivo-logo" accept="image/png,image/jpeg,image/webp">
+                  <button class="mini-botao" type="button" id="logo-padrao">Voltar à logo original</button>
+                </div>
+              </div>
+              <p class="dica">Use uma imagem horizontal (mais larga que alta).</p>
+            </div>
+            <div class="painel">
+              <h2>Pagamentos</h2>
+              <p id="info-pagamento" class="suave"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- USUÁRIOS -->
+      <section data-secao="usuarios" class="escondido">
+        <div class="cabecalho"><div><h1>Usuários</h1><p>Quem pode entrar na cozinha e no admin</p></div></div>
+        <div class="painel tabela-rolagem">
+          <table class="tabela">
+            <thead><tr><th>Usuário</th><th>Acesso</th><th></th></tr></thead>
+            <tbody id="tabela-usuarios"></tbody>
+          </table>
+        </div>
+        <form class="painel form-grade" id="form-usuario">
+          <h2 class="inteiro">Novo usuário</h2>
+          <div class="campo"><label for="us-nome">Usuário</label><input id="us-nome" maxlength="40" autocapitalize="none" placeholder="ex.: maria" required></div>
+          <div class="campo"><label for="us-senha">Senha <span class="suave">(mín. 8)</span></label><input id="us-senha" type="password" minlength="8" autocomplete="new-password" required></div>
+          <div class="campo"><label for="us-papel">Acesso</label>
+            <select id="us-papel"><option value="cozinha">Cozinha (só pedidos)</option><option value="admin">Administrador (tudo)</option></select></div>
+          <div class="inteiro"><button class="botao" type="submit">Criar usuário</button></div>
+        </form>
+        <div class="painel tabela-rolagem">
+          <h2>Atividade recente <small class="suave">logins, preços, cancelamentos e alertas</small></h2>
+          <table class="tabela">
+            <thead><tr><th>Quando</th><th>Quem</th><th>O quê</th><th>Detalhe</th></tr></thead>
+            <tbody id="tabela-atividade"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Editor de produto -->
+  <dialog class="folha" id="janela-produto" aria-labelledby="titulo-produto">
+    <form class="janela" id="form-produto" novalidate>
+      <div class="titulo-form"><h2 id="titulo-produto">Produto</h2><button class="icone-botao" type="button" data-fechar aria-label="Fechar">✕</button></div>
+      <div class="rolagem corpo-form">
+        <div class="upload">
+          <div class="foto" id="prev-foto"></div>
+          <div class="acoes-upload">
+            <label class="botao contorno" for="arquivo-foto">Escolher foto</label>
+            <input type="file" id="arquivo-foto" accept="image/png,image/jpeg,image/webp">
+            <button class="mini-botao perigo" type="button" id="remover-foto">Remover foto</button>
+            <span class="dica">Sem foto, aparece o emoji.</span>
+          </div>
+        </div>
+        <div class="form-grade">
+          <div class="campo inteiro"><label for="p-nome">Nome</label><input id="p-nome" maxlength="60" required></div>
+          <div class="campo inteiro"><label for="p-desc">Descrição</label><textarea id="p-desc" maxlength="200" rows="2"></textarea></div>
+          <div class="campo"><label for="p-preco">Preço (R$)</label><input id="p-preco" inputmode="decimal" placeholder="0,00" required></div>
+          <div class="campo"><label for="p-cat">Categoria</label><select id="p-cat"></select></div>
+          <div class="campo"><label for="p-emoji">Emoji <span class="suave">(se não tiver foto)</span></label><input id="p-emoji" maxlength="8"></div>
+        </div>
+        <label class="linha-chave"><span>Disponível<small>Aparece no cardápio</small></span><input type="checkbox" class="chave" id="p-disp"></label>
+        <label class="linha-chave"><span>Aceita adicionais<small>Cliente pode escolher complementos</small></span><input type="checkbox" class="chave" id="p-adic"></label>
+        <label class="linha-chave"><span>Mais pedido ⭐<small>Aparece nos destaques do topo</small></span><input type="checkbox" class="chave" id="p-dest"></label>
+        <div id="erro-produto" class="erro escondido" role="alert"></div>
+      </div>
+      <div class="rodape">
+        <button class="mini-botao perigo" type="button" id="excluir-produto">Excluir</button>
+        <button class="botao cheio" type="submit">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="/comum.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>

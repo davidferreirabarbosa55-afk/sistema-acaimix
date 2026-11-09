@@ -1,0 +1,62 @@
+/* ============ Painel da cozinha (tema escuro para tela grande) ============ */
+body.cozinha { background: #140620; color: #f3eafb; }
+.cz-topo {
+  position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 10px 16px; background: #210b36; border-bottom: 1px solid #34184f;
+}
+.cz-topo .marca { display: flex; align-items: center; gap: 12px; }
+.cz-topo .marca img { height: 40px; border-radius: 8px; }
+.cz-topo h1 { font-size: 1.3rem; }
+.cz-topo small { color: #c6b3dc; display: flex; align-items: center; gap: 6px; }
+.cz-topo .acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.cz-topo .acoes button, .cz-topo .acoes a { background: #34184f; color: #fff; border: 0; border-radius: 10px; padding: 9px 12px; font-weight: 700; text-decoration: none; font-size: .9rem; }
+.cz-topo .acoes button:hover, .cz-topo .acoes a:hover { background: #46216a; }
+.indicador { width: 10px; height: 10px; border-radius: 50%; background: var(--vermelho); display: inline-block; }
+.indicador.on { background: #40c057; box-shadow: 0 0 0 3px rgba(64,192,87,.25); }
+
+.quadro { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 14px; min-height: calc(100vh - 62px); }
+@media (max-width: 960px) { .quadro { grid-template-columns: minmax(0, 1fr); } }
+.coluna { background: #1b0a2c; border-radius: 18px; padding: 10px; }
+.coluna h2 { margin: 6px 6px 12px; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; letter-spacing: 1px; font-family: var(--fonte); font-weight: 900; color: #d9c8ee; }
+.coluna h2 span { background: #34184f; border-radius: 999px; padding: 2px 12px; color: #fff; }
+.coluna .vazia { text-align: center; color: #7f6a99; padding: 30px 0; font-size: .95rem; }
+
+.ticket { background: #26103d; border-radius: 16px; padding: 14px; margin-bottom: 10px; border-left: 6px solid #6c5a84; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+.ticket.recebido { border-left-color: var(--amarelo); }
+.ticket.em_preparo { border-left-color: var(--roxo-400); }
+.ticket.pronto { border-left-color: #40c057; }
+.ticket.novo { animation: piscar 1s ease-in-out 5; }
+@keyframes piscar { 50% { background: #4a2470; } }
+.ticket .cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ticket .num { font-family: var(--fonte-titulo); font-size: 1.8rem; font-weight: 800; color: var(--amarelo); line-height: 1; }
+.ticket .tempo { font-size: .85rem; color: #c6b3dc; font-weight: 700; white-space: nowrap; }
+.ticket .tempo.atrasado { color: #ff8787; }
+.ticket .info { font-size: .88rem; color: #c6b3dc; margin: 6px 0 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.etiqueta { font-size: .72rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: #34184f; color: #e9dcf7; }
+.etiqueta.pago { background: #1f4d2a; color: #b2f2bb; }
+.etiqueta.balcao { background: #6b2c00; color: #ffd8a8; }
+.ticket ul { list-style: none; margin: 0 0 10px; padding: 0; }
+.ticket li { padding: 7px 0; font-size: 1.08rem; font-weight: 700; border-top: 1px dashed #3b1d58; }
+.ticket li:first-child { border-top: 0; }
+.ticket li b { color: var(--amarelo); margin-right: 6px; }
+.ticket li .adic { display: block; color: #d0bfff; font-size: .92rem; font-weight: 600; margin-top: 2px; }
+.ticket li .obs-item { display: block; color: #ffa8a8; font-size: .9rem; font-weight: 700; margin-top: 2px; }
+.ticket .obs { background: #4a1d2c; border-radius: 10px; padding: 8px 10px; font-size: .92rem; margin-bottom: 10px; }
+.ticket .botoes { display: flex; gap: 6px; }
+.ticket .botoes button { flex: 1; border: 0; border-radius: 10px; padding: 12px; font-weight: 800; background: #3b1d58; color: #fff; font-size: .95rem; }
+.ticket .botoes button.principal { background: var(--amarelo); color: var(--roxo-950); flex: 2.5; }
+.ticket .botoes button:hover { filter: brightness(1.1); }
+
+.login-box { width: min(380px, calc(100% - 32px)); margin: 10vh auto; background: #fff; color: var(--texto); padding: 28px; border-radius: 24px; box-shadow: var(--sombra-forte); }
+.login-box img { width: 220px; margin: 0 auto 14px; border-radius: 14px; }
+.login-box h1 { text-align: center; font-size: 1.5rem; color: var(--roxo-900); margin-bottom: 18px; }
+
+.painel-disp .janela { color: var(--texto); }
+.painel-disp .linha-disp { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--linha); font-weight: 700; }
+.painel-disp h3 { margin: 16px 0 4px; color: var(--roxo-800); }
+
+/* chave liga/desliga */
+.chave { appearance: none; width: 46px; height: 26px; border-radius: 999px; background: #d6cde2; position: relative; cursor: pointer; transition: background .2s; margin: 0; flex: none; }
+.chave::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.chave:checked { background: var(--verde); }
+.chave:checked::after { transform: translateX(20px); }
