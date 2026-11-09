@@ -1,30 +1,37 @@
-// Utilitários dos testes: sobe o servidor numa porta livre com um banco temporário.
+// Utilitários dos testes: cria um banco Postgres novo com o schema.sql, sobe o "Supabase falso"
+// e o servidor local do sistema apontando para ele.
+//
+// Precisa de um Postgres acessível. Por padrão usa o do ambiente de testes; para outro, defina PG_TESTE,
+// ex.: PG_TESTE="postgresql://postgres:postgres@localhost:5432/postgres" npm test
 'use strict';
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { once } = require('node:events');
+const { criarBanco, subirSupabaseFalso } = require('./supabase-falso');
+
+const PG = process.env.PG_TESTE || 'postgresql://postgres@localhost:54329/postgres?host=/tmp/pgteste';
+const SCHEMA = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'schema.sql'), 'utf8');
 
 async function subirServidor(env = {}) {
-  const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'acaimix-teste-'));
+  const banco = await criarBanco(PG, SCHEMA);
+  const chave = 'sb_secret_teste_' + Math.random().toString(36).slice(2);
+  const supabase = await subirSupabaseFalso({ conexao: banco.conexao, chave });
   Object.assign(process.env, {
-    DB_PATH: path.join(pasta, 'teste.db'), PORTA: '0', NODE_ENV: 'test',
-    ADMIN_USUARIO: 'admin', ADMIN_SENHA: 'admin-teste-123',
-    COZINHA_USUARIO: 'cozinha', COZINHA_SENHA: 'cozinha-teste-123',
+    SUPABASE_URL: supabase.url, SUPABASE_SECRET_KEY: chave, NODE_ENV: 'test', CRON_SECRET: 'segredo-do-cron-123',
+    ADMIN_USUARIO: 'admin', ADMIN_SENHA: 'admin-teste-123', COZINHA_USUARIO: 'cozinha', COZINHA_SENHA: 'cozinha-teste-123',
     MP_ACCESS_TOKEN: '', MP_WEBHOOK_SECRET: '', URL_PUBLICA: '',
     ...env,
   });
-  const console_log = console.log;
-  console.log = () => {}; // silencia a mensagem de início
-  const { servidor } = require('../src/server');
-  if (!servidor.listening) await once(servidor, 'listening');
-  console.log = console_log;
+  const { servidor } = require('../src/local');
+  servidor.listen(0, '127.0.0.1');
+  await once(servidor, 'listening');
   const base = `http://127.0.0.1:${servidor.address().port}`;
 
-  const fechar = () => {
+  const fechar = async () => {
     servidor.closeAllConnections();
     servidor.close();
-    fs.rmSync(pasta, { recursive: true, force: true });
+    supabase.fechar();
+    await banco.apagar();
   };
 
   async function chamar(caminho, { metodo = 'GET', corpo, cookie, cabecalhos = {} } = {}) {
@@ -44,7 +51,7 @@ async function subirServidor(env = {}) {
     return r.cabecalhos.get('set-cookie').split(';')[0];
   }
 
-  return { base, chamar, entrar, fechar };
+  return { base, chamar, entrar, fechar, supabase, banco };
 }
 
 module.exports = { subirServidor };

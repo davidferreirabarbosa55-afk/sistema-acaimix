@@ -1,4 +1,4 @@
-# Roda os testes automáticos a cada envio (push) e pull request.
+# Roda os testes automáticos a cada envio (push) e pull request, com um Postgres de verdade.
 name: Testes
 
 on:
@@ -12,6 +12,16 @@ permissions:
 jobs:
   testes:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PG_TESTE: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

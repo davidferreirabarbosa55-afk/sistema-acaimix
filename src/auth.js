@@ -1,56 +1,57 @@
-// Autenticação da cozinha: senha com scrypt + sessões guardadas como hash.
+// Autenticação: senha com scrypt + sessões guardadas no banco como hash (nunca o token puro).
 'use strict';
 
 const crypto = require('node:crypto');
+const { promisify } = require('node:util');
+const { rpc } = require('./supabase');
 
+const scrypt = promisify(crypto.scrypt);
+const OPCOES = { N: 16384, r: 8, p: 1 };
 const SESSAO_HORAS = 12;
 
-function hashSenha(senha) {
+async function hashSenha(senha) {
   const sal = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(senha, sal, 64, { N: 16384, r: 8, p: 1 });
+  const hash = await scrypt(String(senha), sal, 64, OPCOES);
   return `scrypt$${sal.toString('hex')}$${hash.toString('hex')}`;
 }
 
-function conferirSenha(senha, armazenado) {
+async function conferirSenha(senha, armazenado) {
   const [alg, salHex, hashHex] = String(armazenado).split('$');
   if (alg !== 'scrypt' || !salHex || !hashHex) return false;
   const esperado = Buffer.from(hashHex, 'hex');
-  const calculado = crypto.scryptSync(String(senha), Buffer.from(salHex, 'hex'), esperado.length, { N: 16384, r: 8, p: 1 });
+  const calculado = await scrypt(String(senha), Buffer.from(salHex, 'hex'), esperado.length, OPCOES);
   return crypto.timingSafeEqual(esperado, calculado);
 }
 
+// Mesmo custo de uma conferência real: quem tenta um usuário inexistente não descobre isso pelo tempo de resposta.
+const HASH_FALSO = `scrypt$${'00'.repeat(16)}$${'00'.repeat(64)}`;
+const conferirFalso = () => conferirSenha('x', HASH_FALSO).then(() => false);
+
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
-function criarSessao(db, usuarioId) {
-  const token = crypto.randomBytes(32).toString('base64url');
-  const expira = Date.now() + SESSAO_HORAS * 3600 * 1000;
-  db.prepare('DELETE FROM sessoes WHERE expira_em < ?').run(Date.now());
-  db.prepare('INSERT INTO sessoes (token_hash, usuario_id, expira_em) VALUES (?, ?, ?)').run(sha256(token), usuarioId, expira);
-  return { token, maxAge: SESSAO_HORAS * 3600 };
-}
-
 function lerCookie(req, nome) {
-  const header = req.headers.cookie || '';
-  for (const parte of header.split(';')) {
+  for (const parte of String(req.headers.cookie || '').split(';')) {
     const [k, ...v] = parte.trim().split('=');
-    if (k === nome) return decodeURIComponent(v.join('='));
+    if (k === nome) { try { return decodeURIComponent(v.join('=')); } catch { return null; } }
   }
   return null;
 }
 
-function usuarioDaSessao(db, req) {
-  const token = lerCookie(req, 'sessao');
-  if (!token) return null;
-  const linha = db.prepare(`
-    SELECT u.id, u.usuario, u.papel, s.expira_em FROM sessoes s
-    JOIN usuarios u ON u.id = s.usuario_id WHERE s.token_hash = ?`).get(sha256(token));
-  if (!linha || linha.expira_em < Date.now()) return null;
-  return linha;
+async function criarSessao(usuarioId) {
+  const token = crypto.randomBytes(32).toString('base64url');
+  await rpc('api_criar_sessao', { usuario_id: usuarioId, token_hash: sha256(token), segundos: SESSAO_HORAS * 3600 });
+  return { token, maxAge: SESSAO_HORAS * 3600 };
 }
 
-function encerrarSessao(db, req) {
+async function usuarioDaSessao(req) {
   const token = lerCookie(req, 'sessao');
-  if (token) db.prepare('DELETE FROM sessoes WHERE token_hash = ?').run(sha256(token));
+  if (!token || token.length > 100) return null;
+  return rpc('api_sessao', { token_hash: sha256(token) });
 }
 
-module.exports = { hashSenha, conferirSenha, criarSessao, usuarioDaSessao, encerrarSessao };
+async function encerrarSessao(req) {
+  const token = lerCookie(req, 'sessao');
+  if (token && token.length <= 100) await rpc('api_encerrar_sessao', { token_hash: sha256(token) });
+}
+
+module.exports = { hashSenha, conferirSenha, conferirFalso, criarSessao, usuarioDaSessao, encerrarSessao };

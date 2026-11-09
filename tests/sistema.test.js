@@ -1,4 +1,4 @@
-// Testes do sistema em modo simulado (sem Mercado Pago). Rode com: npm test
+// Testes do sistema em modo simulado (sem Mercado Pago), com Postgres de verdade. Rode com: npm test
 'use strict';
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -165,9 +165,13 @@ test('admin: upload aceita imagem real e recusa arquivo disfarçado', async () =
   const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==', 'base64');
   const ok = await s.chamar(`/api/admin/produtos/${id}/imagem`, { metodo: 'POST', cookie: admin, corpo: { imagem: 'data:image/jpeg;base64,' + jpeg.toString('base64') } });
   assert.equal(ok.status, 200);
-  const foto = await fetch(s.base + ok.json.imagem);
+  assert.match(ok.json.imagem, /\/storage\/v1\/object\/public\/fotos\/produtos\/[0-9a-f]{24}\.jpg$/);
+  const foto = await fetch(ok.json.imagem);
   assert.equal(foto.headers.get('content-type'), 'image/jpeg');
-  assert.equal(foto.headers.get('x-content-type-options'), 'nosniff');
+  // trocar a foto apaga a antiga do Storage
+  const ok2 = await s.chamar(`/api/admin/produtos/${id}/imagem`, { metodo: 'POST', cookie: admin, corpo: { imagem: 'data:image/jpeg;base64,' + jpeg.toString('base64') } });
+  assert.equal((await fetch(ok.json.imagem)).status, 404);
+  assert.equal((await fetch(ok2.json.imagem)).status, 200);
 
   const falso = 'data:image/png;base64,' + Buffer.from('<script>alert(1)</script>').toString('base64');
   const r = await s.chamar(`/api/admin/produtos/${id}/imagem`, { metodo: 'POST', cookie: admin, corpo: { imagem: falso } });
@@ -182,22 +186,56 @@ test('admin: usuários com senha mínima e sem excluir a si mesmo', async () => 
   assert.equal((await s.chamar(`/api/admin/usuarios/${eu.id}`, { metodo: 'DELETE', cookie: admin })).status, 400);
 });
 
-// ---------- arquivos e cabeçalhos ----------
-test('cabeçalhos de segurança, gzip e cache', async () => {
+// ---------- manutenção, limites, arquivos ----------
+test('cron de manutenção só roda com o segredo certo', async () => {
+  assert.equal((await s.chamar('/api/cron/manutencao')).status, 401);
+  assert.equal((await s.chamar('/api/cron/manutencao', { cabecalhos: { Authorization: 'Bearer errado' } })).status, 401);
+  const r = await s.chamar('/api/cron/manutencao', { cabecalhos: { Authorization: 'Bearer segredo-do-cron-123' } });
+  assert.equal(r.status, 200);
+  assert.equal(typeof r.json.anonimizados, 'number');
+});
+
+test('LGPD: manutenção apaga dados pessoais de pedidos antigos', async () => {
+  const { psql } = require('./supabase-falso');
+  await psql(s.banco.conexao, ['-c', "update acaimix.pedidos set criado_em = now() - interval '200 days' where id = (select min(id) from acaimix.pedidos)"]);
+  await s.chamar('/api/cron/manutencao', { cabecalhos: { Authorization: 'Bearer segredo-do-cron-123' } });
+  const r = await psql(s.banco.conexao, ['-c', 'select cliente_nome, cliente_telefone from acaimix.pedidos order by id limit 1']);
+  assert.equal(r.stdout.trim(), 'Cliente|');
+});
+
+test('limite de tentativas de login fica no banco (vale para todas as cópias da função)', async () => {
+  let ultimo;
+  for (let i = 0; i < 12; i++) ultimo = await s.chamar('/api/login', { metodo: 'POST', corpo: { usuario: 'ninguem', senha: 'x' } });
+  assert.equal(ultimo.status, 429);
+});
+
+test('cabeçalhos de segurança no servidor local', async () => {
   const r = await fetch(s.base + '/', { headers: { 'Accept-Encoding': 'gzip' } });
   assert.match(r.headers.get('content-security-policy'), /default-src 'self'/);
+  assert.match(r.headers.get('content-security-policy'), /img-src 'self' data: https:\/\/\*\.supabase\.co/);
   assert.equal(r.headers.get('x-frame-options'), 'DENY');
-  const etag = r.headers.get('etag');
-  assert.ok(etag);
-  const css = await fetch(s.base + '/estilo.css', { headers: { 'Accept-Encoding': 'gzip' }, decompress: false });
-  assert.equal(css.headers.get('content-encoding'), 'gzip');
-  const denovo = await fetch(s.base + '/', { headers: { 'If-None-Match': etag } });
-  assert.equal(denovo.status, 304);
+  assert.equal((await fetch(s.base + '/admin')).status, 200, '/admin abre admin.html, como na Vercel');
+});
+
+test('vercel.json tem os mesmos cabeçalhos e o cron', () => {
+  const v = require('../vercel.json');
+  const cab = Object.fromEntries(v.headers[0].headers.map((h) => [h.key, h.value]));
+  assert.match(cab['Content-Security-Policy'], /frame-ancestors 'none'/);
+  assert.ok(cab['Strict-Transport-Security']);
+  assert.equal(v.crons[0].path, '/api/cron/manutencao');
 });
 
 test('não deixa ler arquivos fora da pasta pública', async () => {
-  for (const caminho of ['/../src/server.js', '/uploads/../teste.db', '/%2e%2e/.env', '/.env']) {
+  for (const caminho of ['/../src/app.js', '/%2e%2e/.env', '/.env', '/../supabase/schema.sql']) {
     const r = await fetch(s.base + caminho);
     assert.equal(r.status, 404, caminho);
   }
+});
+
+test('a chave pública (anon) não consegue nada no banco', async () => {
+  const { psql } = require('./supabase-falso');
+  const f = await psql(s.banco.conexao, ['-c', 'set role anon', '-c', "select public.api_exportar('{}')"]);
+  assert.match(f.stderr, /permission denied/);
+  const t = await psql(s.banco.conexao, ['-c', 'set role anon', '-c', 'select * from acaimix.usuarios']);
+  assert.match(t.stderr, /permission denied/);
 });

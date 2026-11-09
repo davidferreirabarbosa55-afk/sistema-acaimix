@@ -30,10 +30,14 @@ function el(tag, attrs = {}, ...filhos) {
   return e;
 }
 
+// Só exibe fotos guardadas no Supabase Storage do próprio sistema (ou da pasta local de testes).
+const fotoValida = (url) => typeof url === 'string' &&
+  (/^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/fotos\//.test(url) || url.startsWith('/uploads/'));
+
 // Foto do produto (ou emoji num fundo colorido, se não houver foto).
 function fotoProduto(p, classe = '') {
   const caixa = el('div', { class: `foto ${classe}` });
-  if (p.imagem && p.imagem.startsWith('/uploads/')) {
+  if (fotoValida(p.imagem)) {
     caixa.append(el('img', { src: p.imagem, alt: '', loading: 'lazy', decoding: 'async' }));
   } else {
     caixa.append(el('span', { class: 'emoji', 'aria-hidden': 'true' }, p.emoji || '🍧'));

@@ -16,7 +16,9 @@ const crypto = require('node:crypto');
 const API = 'https://api.mercadopago.com';
 const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
 const WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || '';
-const URL_PUBLICA = (process.env.URL_PUBLICA || '').replace(/\/$/, '');
+// Endereço público do site. Na Vercel, se não for informado, usa o domínio de produção do projeto.
+const URL_PUBLICA = (process.env.URL_PUBLICA ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '')).replace(/\/$/, '');
 
 const modoSimulado = !ACCESS_TOKEN;
 

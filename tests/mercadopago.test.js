@@ -31,7 +31,7 @@ let s;
 before(async () => {
   s = await subirServidor({ MP_ACCESS_TOKEN: 'TEST-123', MP_WEBHOOK_SECRET: SEGREDO, URL_PUBLICA: 'https://acaimix.exemplo.com' });
 });
-after(() => { s.fechar(); globalThis.fetch = fetchReal; });
+after(async () => { await s.fechar(); globalThis.fetch = fetchReal; });
 
 function assinatura(id, pedidoId = 'req-' + crypto.randomUUID(), ts = String(Date.now())) {
   const v1 = crypto.createHmac('sha256', SEGREDO).update(`id:${id};request-id:${pedidoId};ts:${ts};`).digest('hex');

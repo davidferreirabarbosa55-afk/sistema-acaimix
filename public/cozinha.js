@@ -1,4 +1,4 @@
-// Painel da cozinha: recebe pedidos em tempo real (Server-Sent Events).
+// Painel da cozinha: consulta os pedidos a cada 4 segundos e apita quando chega um novo.
 (() => {
   const $ = (id) => document.getElementById(id);
   const pedidos = new Map();
@@ -8,11 +8,13 @@
     em_preparo: [{ rotulo: '↩', para: 'recebido', titulo: 'Voltar para Novos' }, { rotulo: 'Pronto!', para: 'pronto', principal: true }],
     pronto: [{ rotulo: '↩', para: 'em_preparo', titulo: 'Voltar para Preparando' }, { rotulo: 'Entregue', para: 'entregue', principal: true }],
   };
-  let fonte = null;
+  let timerFila = null;
+  let primeiraCarga = true;
+  const INTERVALO = 4000;
   let somLigado = true;
   let audio;
 
-  const dataUTC = (s) => new Date(String(s).replace(' ', 'T') + 'Z');
+  const dataUTC = (s) => new Date(String(s).includes('T') ? s : String(s).replace(' ', 'T') + 'Z');
 
   function bip() {
     if (!somLigado) return;
@@ -38,7 +40,7 @@
   function mostrarLogin() {
     $('tela-login').classList.remove('escondido');
     $('tela-painel').classList.add('escondido');
-    if (fonte) { fonte.close(); fonte = null; }
+    clearTimeout(timerFila); timerFila = null;
   }
   $('form-login').addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -60,31 +62,29 @@
     $('tela-login').classList.add('escondido');
     $('tela-painel').classList.remove('escondido');
     $('link-admin').classList.toggle('escondido', u.papel !== 'admin');
-    await recarregar();
-    conectar();
+    primeiraCarga = true;
+    atualizarFila();
   }
 
-  async function recarregar() {
+  // Busca a fila; os pedidos que ainda não estavam na tela piscam e o som toca.
+  async function atualizarFila() {
+    clearTimeout(timerFila);
     try {
       const lista = await api('/api/cozinha/pedidos');
+      const novos = primeiraCarga ? [] : lista.filter((p) => !pedidos.has(p.id) && p.status === 'recebido').map((p) => p.id);
       pedidos.clear();
       for (const p of lista) pedidos.set(p.id, p);
-      desenhar();
-    } catch (e) { if (e.status === 401) mostrarLogin(); }
-  }
-
-  function conectar() {
-    if (fonte) fonte.close();
-    fonte = new EventSource('/api/cozinha/eventos');
-    fonte.onopen = () => { $('indicador').classList.add('on'); $('conexao').textContent = 'ao vivo'; recarregar(); };
-    fonte.onerror = () => { $('indicador').classList.remove('on'); $('conexao').textContent = 'reconectando…'; };
-    fonte.addEventListener('pedido', (ev) => {
-      const p = JSON.parse(ev.data);
-      const ehNovo = !pedidos.has(p.id) && p.status === 'recebido';
-      if (COLUNAS.includes(p.status)) pedidos.set(p.id, p); else pedidos.delete(p.id);
-      desenhar(ehNovo ? p.id : null);
-      if (ehNovo) bip();
-    });
+      desenhar(new Set(novos));
+      if (novos.length) bip();
+      primeiraCarga = false;
+      $('indicador').classList.add('on');
+      $('conexao').textContent = 'ao vivo';
+    } catch (e) {
+      if (e.status === 401) return mostrarLogin();
+      $('indicador').classList.remove('on');
+      $('conexao').textContent = 'sem conexão, tentando de novo…';
+    }
+    timerFila = setTimeout(atualizarFila, INTERVALO);
   }
 
   const minutosDesde = (s) => Math.max(0, Math.floor((Date.now() - dataUTC(s)) / 60000));
@@ -108,11 +108,11 @@
         el('button', { type: 'button', class: a.principal ? 'principal' : '', title: a.titulo || null, onclick: () => mover(p, a) }, a.rotulo))));
   }
 
-  function desenhar(idNovo = null) {
+  function desenhar(novos = new Set()) {
     for (const col of COLUNAS) {
       const lista = [...pedidos.values()].filter((p) => p.status === col).sort((a, b) => a.id - b.id);
       const alvo = $(`col-${col}`);
-      alvo.replaceChildren(...lista.map((p) => ticket(p, p.id === idNovo)));
+      alvo.replaceChildren(...lista.map((p) => ticket(p, novos.has(p.id))));
       if (!lista.length) alvo.append(el('div', { class: 'vazia' }, col === 'recebido' ? 'Aguardando pedidos…' : '—'));
       $(`n-${col}`).textContent = lista.length;
     }

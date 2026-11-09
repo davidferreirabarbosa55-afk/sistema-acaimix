@@ -29,7 +29,7 @@
     return Math.round(n * 100);
   }
   const reais = (c) => (c / 100).toFixed(2).replace('.', ',');
-  const dataUTC = (s) => new Date(String(s).replace(' ', 'T') + 'Z');
+  const dataUTC = (s) => new Date(String(s).includes('T') ? s : String(s).replace(' ', 'T') + 'Z');
   const hojeLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 
   // Reduz a foto no próprio navegador antes de enviar (mais rápido e leve).
