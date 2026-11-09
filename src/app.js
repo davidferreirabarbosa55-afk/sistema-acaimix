@@ -5,7 +5,7 @@
 require('./env').carregar();
 
 const crypto = require('node:crypto');
-const { rpc, enviarFoto, apagarFoto, ErroHttp } = require('./supabase');
+const { rpc, enviarFoto, apagarFoto, problemasDeConfiguracao, ErroHttp } = require('./supabase');
 const auth = require('./auth');
 const pag = require('./pagamentos');
 
@@ -27,8 +27,11 @@ function json(res, status, dados, extras = {}) {
 }
 
 function lerCorpo(req, limite = LIMITE_CORPO) {
-  // Na Vercel o corpo pode já ter sido lido e entregue em req.body.
-  if (req.body !== undefined && req.readableEnded) {
+  // Na Vercel, req.body é interpretado na hora do acesso e LANÇA erro se o JSON for inválido.
+  // Por isso o acesso fica dentro do try: assim a função sempre devolve uma promessa (nunca lança direto).
+  let corpoPronto;
+  try { corpoPronto = req.body; } catch { return Promise.reject(new ErroHttp(400, 'JSON inválido')); }
+  if (corpoPronto !== undefined && req.readableEnded) {
     if (Buffer.isBuffer(req.body)) req.body = req.body.toString('utf8');
     if (typeof req.body === 'string') {
       if (req.body.length > limite) return Promise.reject(new ErroHttp(413, 'Arquivo ou requisição muito grande'));
@@ -181,9 +184,19 @@ const rota = (metodo, padrao, fn) => rotas.push({ metodo, padrao, fn });
 const CACHE_CURTO = { 'Cache-Control': 'public, max-age=0, s-maxage=10, stale-while-revalidate=30' };
 
 // ---------------- Público ----------------
+// Diagnóstico: diz o que falta configurar, sem revelar nenhum valor secreto.
 rota('GET', /^\/api\/saude$/, async (req, res) => {
-  await rpc('api_config');
-  json(res, 200, { ok: true });
+  const problemas = problemasDeConfiguracao();
+  let banco = 'não testado (corrija as variáveis primeiro)';
+  if (!problemas.length) {
+    try { await rpc('api_config'); banco = 'ok'; }
+    catch (e) { banco = 'com problema'; problemas.push(e.motivo || e.message); }
+  }
+  json(res, problemas.length ? 503 : 200, {
+    ok: !problemas.length, banco, problemas,
+    node: process.version, pagamentos: pag.modoSimulado ? 'modo de teste (simulado)' : 'Mercado Pago ativo',
+    cron: process.env.CRON_SECRET ? 'configurado' : 'falta CRON_SECRET (a limpeza diária não vai rodar)',
+  });
 });
 
 rota('GET', /^\/api\/config$/, async (req, res) => {
@@ -504,9 +517,16 @@ async function tratar(req, res) {
     }
     throw new ErroHttp(404, 'Rota não encontrada');
   } catch (e) {
-    const status = e.status || 500;
-    if (status >= 500) console.error(e);
-    if (!res.headersSent) json(res, status, { erro: status === 500 ? 'Erro interno. Tente novamente.' : e.message });
+    // Este bloco NUNCA pode lançar erro: se lançasse, a Vercel derrubaria a função (FUNCTION_INVOCATION_FAILED).
+    try {
+      const status = Number.isInteger(e?.status) ? e.status : 500;
+      if (status >= 500) console.error(`[erro] ${req.method} ${caminho}:`, e?.motivo || '', e);
+      if (!res.headersSent) json(res, status, { erro: status === 500 ? 'Erro interno. Tente novamente.' : e.message });
+      else res.end();
+    } catch (e2) {
+      console.error('[erro] falha ao responder:', e2);
+      try { res.end(); } catch { /* conexão já fechada */ }
+    }
   }
 }
 

@@ -11,22 +11,59 @@ class ErroHttp extends Error {
   constructor(status, msg) { super(msg); this.status = status; }
 }
 
+// Confere as variáveis de ambiente SEM revelar seus valores. Devolve a lista de problemas (vazia = ok).
+function problemasDeConfiguracao() {
+  const p = [];
+  if (!URL_SUPABASE) p.push('Falta a variável SUPABASE_URL.');
+  else if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(URL_SUPABASE) && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(URL_SUPABASE)) {
+    p.push('SUPABASE_URL em formato inesperado. Use só o endereço do projeto, ex.: https://abcdxyz.supabase.co (sem /rest/v1 no final).');
+  }
+  if (!CHAVE) p.push('Falta a variável SUPABASE_SECRET_KEY.');
+  else if (CHAVE.startsWith('sb_publishable_')) p.push('SUPABASE_SECRET_KEY contém a chave PÚBLICA (sb_publishable_). Use a chave secreta (sb_secret_).');
+  else if (CHAVE.startsWith('eyJ') && papelDoJwt(CHAVE) === 'anon') p.push('SUPABASE_SECRET_KEY contém a chave "anon". Use a chave secreta (sb_secret_) ou a service_role.');
+  else if (/\s/.test(CHAVE)) p.push('SUPABASE_SECRET_KEY tem espaços ou quebra de linha. Copie a chave de novo, sem espaços.');
+  return p;
+}
+function papelDoJwt(jwt) {
+  try { return JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString()).role; } catch { return null; }
+}
+
 function cabecalhos(extra = {}) {
-  if (!URL_SUPABASE || !CHAVE) throw new Error('Configure SUPABASE_URL e SUPABASE_SECRET_KEY nas variáveis de ambiente.');
+  const problemas = problemasDeConfiguracao();
+  if (problemas.length) {
+    console.error('[configuração] ' + problemas.join(' '));
+    throw new ErroHttp(503, 'O sistema ainda não está configurado. Veja /api/saude.');
+  }
   const h = { apikey: CHAVE, ...extra };
   // Chaves antigas (service_role, formato JWT "eyJ...") também vão no Authorization.
   if (CHAVE.startsWith('eyJ')) h.Authorization = `Bearer ${CHAVE}`;
   return h;
 }
 
+// Explica em português o que costuma estar errado quando o Supabase recusa a chamada.
+function motivoDaFalha(status, codigo, mensagem) {
+  if (status === 401 || status === 403 || codigo === '42501') return 'O Supabase recusou a chave. Confira se SUPABASE_SECRET_KEY é a chave SECRETA deste projeto.';
+  if (codigo === 'PGRST202' || codigo === '42883' || (status === 404 && /function/i.test(mensagem))) return 'As funções do banco não existem. Rode o arquivo supabase/schema.sql no SQL Editor do Supabase.';
+  if (codigo === 'PGRST002' || status === 503) return 'O Supabase está indisponível ou o projeto está pausado. Abra o painel do Supabase e clique em "Resume project", se for o caso.';
+  return `Resposta inesperada do Supabase (HTTP ${status} ${codigo}).`;
+}
+
 // Chama uma função "api_*" do banco. Erros de regra de negócio viram ErroHttp com a mensagem do banco.
 async function rpc(funcao, p = {}) {
-  const resp = await fetch(`${URL_SUPABASE}/rest/v1/rpc/${funcao}`, {
-    method: 'POST',
-    headers: cabecalhos({ 'Content-Type': 'application/json', Accept: 'application/json' }),
-    body: JSON.stringify({ p }),
-    signal: AbortSignal.timeout(10_000),
-  });
+  let resp;
+  try {
+    resp = await fetch(`${URL_SUPABASE}/rest/v1/rpc/${funcao}`, {
+      method: 'POST',
+      headers: cabecalhos({ 'Content-Type': 'application/json', Accept: 'application/json' }),
+      body: JSON.stringify({ p }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (e) {
+    if (e instanceof ErroHttp) throw e;
+    const motivo = `Não consegui conectar em ${URL_SUPABASE} (${e.cause?.code || e.name}: ${e.cause?.message || e.message}). Confira SUPABASE_URL.`;
+    console.error(`[supabase] ${funcao}: ${motivo}`);
+    throw Object.assign(new ErroHttp(503, 'Não foi possível acessar o banco de dados agora. Tente novamente.'), { motivo });
+  }
   const texto = await resp.text();
   let dados = null;
   try { dados = texto ? JSON.parse(texto) : null; } catch { /* resposta não-JSON */ }
@@ -35,8 +72,9 @@ async function rpc(funcao, p = {}) {
   const codigo = dados?.code || '';
   if (/^PT\d{3}$/.test(codigo)) throw new ErroHttp(Number(codigo.slice(2)), dados.message);
   if (codigo === 'P0001') throw new ErroHttp(400, dados.message);
-  console.error(`[supabase] ${funcao} falhou: HTTP ${resp.status} ${codigo} ${dados?.message || texto.slice(0, 200)}`);
-  throw new ErroHttp(503, 'Não foi possível acessar o banco de dados agora. Tente novamente.');
+  const motivo = motivoDaFalha(resp.status, codigo, dados?.message || texto);
+  console.error(`[supabase] ${funcao} falhou: HTTP ${resp.status} ${codigo} ${dados?.message || texto.slice(0, 200)} → ${motivo}`);
+  throw Object.assign(new ErroHttp(503, 'Não foi possível acessar o banco de dados agora. Tente novamente.'), { motivo });
 }
 
 // ---------- Storage (fotos) ----------
@@ -71,4 +109,4 @@ async function apagarFoto(url) {
   } catch (e) { console.error('[supabase] não apagou foto antiga:', e.message); }
 }
 
-module.exports = { rpc, enviarFoto, apagarFoto, prefixoPublico, ErroHttp, URL_SUPABASE };
+module.exports = { rpc, enviarFoto, apagarFoto, prefixoPublico, problemasDeConfiguracao, ErroHttp, URL_SUPABASE };

@@ -186,6 +186,22 @@ test('admin: usuários com senha mínima e sem excluir a si mesmo', async () => 
   assert.equal((await s.chamar(`/api/admin/usuarios/${eu.id}`, { metodo: 'DELETE', cookie: admin })).status, 400);
 });
 
+// ---------- diagnóstico e robustez ----------
+test('/api/saude confirma configuração e banco', async () => {
+  const r = await s.chamar('/api/saude');
+  assert.equal(r.status, 200);
+  assert.equal(r.json.banco, 'ok');
+  assert.deepEqual(r.json.problemas, []);
+  assert.ok(!JSON.stringify(r.json).includes(process.env.SUPABASE_SECRET_KEY), 'nunca mostra a chave');
+});
+
+test('JSON quebrado responde 400 (e não derruba a função)', async () => {
+  for (const caminho of ['/api/pedidos', '/api/login']) {
+    const r = await fetch(s.base + caminho, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{quebrado' });
+    assert.equal(r.status, 400, caminho);
+  }
+});
+
 // ---------- manutenção, limites, arquivos ----------
 test('cron de manutenção só roda com o segredo certo', async () => {
   assert.equal((await s.chamar('/api/cron/manutencao')).status, 401);
